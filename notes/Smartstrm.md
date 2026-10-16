@@ -1,6 +1,85 @@
-以下是针对环境（飞牛公网部署 + SmartStrm + Caddy 反代）整理的完整指南。
+以下是针对环境（飞牛/jellyfin公网部署 + SmartStrm + Caddy 反代）整理的完整指南。
 
 ---
+
+## Jellyfin + SmartStrm 302直链
+
+### Docker compose 内容
+
+```yaml
+name: jellyfin-strm-stack
+services:
+  # 1. Jellyfin 媒体服务器 (原生端口 8096)
+  jellyfin:
+    image: nyanmisaka/jellyfin:latest
+    container_name: jellyfin
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - TZ=Asia/Shanghai
+      - PUID=0
+      - PGID=0
+    volumes:
+      - /opt/media-stack/jellyfin/config:/config
+      - /opt/media-stack/jellyfin/cache:/cache
+      - /opt/media-stack/strm:/strm
+
+  smartstrm:
+    image: cp0204/smartstrm:latest
+    container_name: smartstrm
+    restart: unless-stopped
+    network_mode: host
+    volumes:
+      - /opt/media-stack/smartstrm/config:/app/config
+      - /opt/media-stack/smartstrm/logs:/app/logs
+      - /opt/media-stack/strm:/strm
+    environment:
+      - TZ=Asia/Shanghai
+      - PORT=8024
+      - ADMIN_USERNAME=admin
+      - ADMIN_PASSWORD=密码
+```
+
+### Caddyfile
+
+```txt
+jf.example.com {
+        reverse_proxy 127.0.0.1:8097 {
+                flush_interval -1
+                transport http {
+                        read_buffer 0
+                        write_buffer 0
+                }
+                header_up Host {host}
+                header_up X-Real-IP {remote_host}
+                header_up X-Forwarded-For {remote_host}
+                header_up X-Forwarded-Proto {scheme}
+        }
+}
+
+strm.example.com {
+        reverse_proxy 127.0.0.1:8024 {
+                flush_interval -1
+                transport http {
+                        read_buffer 0
+                        write_buffer 0
+                }
+                header_up Host {host}
+                header_up X-Real-IP {remote_host}
+                header_up X-Forwarded-For {remote_host}
+                header_up X-Forwarded-Proto {scheme}
+        }
+}
+```
+
+### 步骤
+
+> 需注意端口问题
+
+1. 部署Docker容器
+2. 配置caddy反代
+3. 配置SmartStrm生成strm文件并打开302代理
+4. 配置jellyfin
 
 ## 飞牛影视 + SmartStrm 302 直链完整部署与排错指南
 
