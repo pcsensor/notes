@@ -4,4 +4,4 @@
 
 ### Smartstrm
 
-[Smartstrm在飞牛上的配置](./notes/Smartstrm.md)
+[Smartstrm + Jellyfin配置](./notes/Smartstrm.md)
